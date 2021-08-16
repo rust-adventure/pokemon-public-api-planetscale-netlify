@@ -21,6 +21,7 @@ diesel = { version = "1.4.7", features = ["mysql", "64-column-tables"] }
 eyre = "0.6.5"
 itertools = "0.10.1"
 ksuid = "0.2.0"
+lamedh_http = "0.3.0"
 serde = { version = "1.0.127", features = ["derive"] }
 tokio = { version = "1.10.0", features = ["macros"] }
 tracing = "0.1.26"

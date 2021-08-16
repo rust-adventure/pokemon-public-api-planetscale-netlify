@@ -1,0 +1,6 @@
+[functions]
+directory = "functions/"
+
+[build]
+command = "make build"
+publish = "www"
