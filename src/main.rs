@@ -8,6 +8,7 @@ use lamedh_http::{
     lambda::{lambda, Context, Error},
     IntoResponse, Request,
 };
+use serde::{Deserialize, Serialize};
 use sqlx::mysql::MySqlPoolOptions;
 
 #[lambda(http)]
@@ -24,18 +25,27 @@ async fn main(
         .connect(&database_url)
         .await?;
 
-    let row: Result<(Vec<u8>, String, u16, String), sqlx::Error> = sqlx::query_as("SELECT id, name, hp, GROUP_CONCAT(DISTINCT ability SEPARATOR ',') from pokemon_table inner join abilities_table on pokemon_table.id = abilities_table.pokemon_id GROUP BY name")
-        .fetch_one(&pool).await;
-
-    let things = row
-        .iter()
-        .map(|(id, name, hp, abilities)| {
-            dbg!(id, name, hp, abilities);
-            let id_string = std::str::from_utf8(id);
-            dbg!(id_string);
-        })
-        .collect::<()>();
+    let rows = sqlx::query_as!(PokemonRow,"
+    SELECT id, P.name, P.hp, abilities from pokemon_table P
+    LEFT JOIN (
+        SELECT name, GROUP_CONCAT(DISTINCT ability SEPARATOR ',') as abilities
+        FROM pokemon_table
+        INNER JOIN abilities_table
+        ON pokemon_table.id = abilities_table.pokemon_id
+        GROUP BY name
+    ) A
+    ON P.name = A.name
+    ")
+        .fetch_all(&pool).await?;
 
     // dbg!(results);
-    Ok("boop")
+    Ok(serde_json::to_value(rows)?)
+}
+
+#[derive(Serialize, sqlx::FromRow)]
+struct PokemonRow {
+    id: Vec<u8>,
+    name: String,
+    hp: u16,
+    abilities: Option<String>,
 }
