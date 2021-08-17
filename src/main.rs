@@ -1,6 +1,7 @@
 use std::env;
 
 mod models;
+use ksuid::Ksuid;
 use models::*;
 
 use lamedh_http::{
@@ -23,10 +24,17 @@ async fn main(
         .connect(&database_url)
         .await?;
 
-    // let results = pokemon_table
-    //     .limit(5)
-    //     .load::<PokemonDB>(&connection)
-    //     .expect("Error loading pokemon");
+    let row: Result<(Vec<u8>, String, u16, String), sqlx::Error> = sqlx::query_as("SELECT id, name, hp, GROUP_CONCAT(DISTINCT ability SEPARATOR ',') from pokemon_table inner join abilities_table on pokemon_table.id = abilities_table.pokemon_id GROUP BY name")
+        .fetch_one(&pool).await;
+
+    let things = row
+        .iter()
+        .map(|(id, name, hp, abilities)| {
+            dbg!(id, name, hp, abilities);
+            let id_string = std::str::from_utf8(id);
+            dbg!(id_string);
+        })
+        .collect::<()>();
 
     // dbg!(results);
     Ok("boop")
