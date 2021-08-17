@@ -4,7 +4,7 @@ use sqlx::{
     mysql::{MySqlArguments, MySqlPoolOptions},
     MySql, MySqlPool,
 };
-use std::{collections::HashMap, convert::TryFrom, env};
+use std::{collections::HashMap, convert::TryFrom, env, fs};
 use indicatif::ProgressIterator;
 
 mod csv_utils;
@@ -165,10 +165,13 @@ async fn main() -> Result<()> {
         (PokemonCsv, PokemonDB),
     > = HashMap::new();
 
-    let mut csv_reader = csv::Reader::from_path("./pokemon.csv")?;
+    let pokemon_csv = fs::read_to_string("./pokemon.csv")?;
+    let csv_size = pokemon_csv.lines().count();
+
+    let mut csv_reader = csv::Reader::from_reader(pokemon_csv.as_bytes());
     let it = csv_reader.deserialize::<PokemonCsv>();
-    let (lower_bound, upper_bound)= it.size_hint();
-    for row in it.progress_count(upper_bound.unwrap_or(lower_bound) as u64)
+
+    for row in it.progress_count(u64::try_from(csv_size)?)
     {
         let pokemon = row?;
         let pokemon_db: PokemonDB = pokemon.clone().into();
