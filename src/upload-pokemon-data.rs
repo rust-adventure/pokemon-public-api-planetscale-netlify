@@ -1,153 +1,260 @@
-#[macro_use]
-extern crate diesel;
-
-use diesel::prelude::*;
 use eyre::{Result, WrapErr};
 use ksuid::Ksuid;
-use std::{convert::TryFrom, env};
+use sqlx::{
+    mysql::{MySqlArguments, MySqlPoolOptions},
+    MySql, MySqlPool,
+};
+use std::{collections::HashMap, convert::TryFrom, env};
 
 mod csv_utils;
 mod models;
-mod schema;
+
 use csv_utils::*;
 use models::*;
-use schema::*;
 
-fn main() -> Result<()> {
+async fn insert_pokemon(
+    pool: &MySqlPool,
+    PokemonDB {
+        id,
+        slug,
+        name,
+        pokedex_id,
+        hp,
+        attack,
+        defense,
+        special_attack,
+        special_defense,
+        speed,
+        height,
+        weight,
+        generation,
+        female_rate,
+        genderless,
+        legendary_or_mythical,
+        is_default,
+        forms_switchable,
+        base_experience,
+        capture_rate,
+        base_happiness,
+        primary_color,
+        number_pokemon_with_typing,
+        normal_attack_effectiveness,
+        fire_attack_effectiveness,
+        water_attack_effectiveness,
+        electric_attack_effectiveness,
+        grass_attack_effectiveness,
+        ice_attack_effectiveness,
+        fighting_attack_effectiveness,
+        poison_attack_effectiveness,
+        ground_attack_effectiveness,
+        fly_attack_effectiveness,
+        psychic_attack_effectiveness,
+        bug_attack_effectiveness,
+        rock_attack_effectiveness,
+        ghost_attack_effectiveness,
+        dragon_attack_effectiveness,
+        dark_attack_effectiveness,
+        steel_attack_effectiveness,
+        fairy_attack_effectiveness,
+    }: &PokemonDB,
+) -> Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> {
+    sqlx::query!(
+        r#"
+    INSERT INTO pokemon_table (
+        id,
+        slug,
+        name,
+        pokedex_id,
+        hp,
+        attack,
+        defense,
+        special_attack,
+        special_defense,
+        speed,
+        height,
+        weight,
+        generation,
+        female_rate,
+        genderless,
+        legendary_or_mythical,
+        is_default,
+        forms_switchable,
+        base_experience,
+        capture_rate,
+        base_happiness,
+        primary_color,
+        number_pokemon_with_typing,
+        normal_attack_effectiveness,
+        fire_attack_effectiveness,
+        water_attack_effectiveness,
+        electric_attack_effectiveness,
+        grass_attack_effectiveness,
+        ice_attack_effectiveness,
+        fighting_attack_effectiveness,
+        poison_attack_effectiveness,
+        ground_attack_effectiveness,
+        fly_attack_effectiveness,
+        psychic_attack_effectiveness,
+        bug_attack_effectiveness,
+        rock_attack_effectiveness,
+        ghost_attack_effectiveness,
+        dragon_attack_effectiveness,
+        dark_attack_effectiveness,
+        steel_attack_effectiveness,
+        fairy_attack_effectiveness
+     )
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        "#,
+        id,
+        slug,
+        name,
+        pokedex_id,
+        hp,
+        attack,
+        defense,
+        special_attack,
+        special_defense,
+        speed,
+        height,
+        weight,
+        generation,
+        female_rate,
+        genderless,
+        legendary_or_mythical,
+        is_default,
+        forms_switchable,
+        base_experience,
+        capture_rate,
+        base_happiness,
+        primary_color,
+        number_pokemon_with_typing,
+        normal_attack_effectiveness,
+        fire_attack_effectiveness,
+        water_attack_effectiveness,
+        electric_attack_effectiveness,
+        grass_attack_effectiveness,
+        ice_attack_effectiveness,
+        fighting_attack_effectiveness,
+        poison_attack_effectiveness,
+        ground_attack_effectiveness,
+        fly_attack_effectiveness,
+        psychic_attack_effectiveness,
+        bug_attack_effectiveness,
+        rock_attack_effectiveness,
+        ghost_attack_effectiveness,
+        dragon_attack_effectiveness,
+        dark_attack_effectiveness,
+        steel_attack_effectiveness,
+        fairy_attack_effectiveness,
+    ).execute(pool).await
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let database_url =
         env::var("DATABASE_URL").expect("a db url");
-    let conn = MysqlConnection::establish(&database_url)
-        .expect(&format!(
-            "Error connecting to {}",
-            database_url
-        ));
+    let pool = MySqlPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await?;
 
-    let new_pokemon =
-        csv::Reader::from_path("./pokemon.csv")?
-            .deserialize::<PokemonCsv>()
-            .map(|result| {
-                result.map(|pokemon| {
-                    let pokemon_db: PokemonDB =
-                        pokemon.clone().into();
-                    (pokemon, pokemon_db)
-                })
-            })
-            .collect::<Result<
-                Vec<(PokemonCsv, PokemonDB)>,
-                csv::Error,
-            >>()?;
+    let mut pokemon_map: HashMap<
+        String,
+        (PokemonCsv, PokemonDB),
+    > = HashMap::new();
+    for row in csv::Reader::from_path("./pokemon.csv")?
+        .deserialize::<PokemonCsv>()
+    {
+        let pokemon = row?;
+        let pokemon_db: PokemonDB = pokemon.clone().into();
 
-    let abilities = new_pokemon
-        .iter()
-        .map(|(pokemon, pokemon_db)| {
-            pokemon
-                .abilities
-                .iter()
-                .map(|ability| Ability {
-                    id: Ksuid::generate()
-                        .to_base62()
-                        .as_bytes()
-                        .into(),
-                    pokemon_id: pokemon_db.id.clone(),
-                    ability: ability.clone(),
-                })
-                .collect::<Vec<Ability>>()
-        })
-        .flatten()
-        .collect::<Vec<Ability>>();
-    let egg_groups = new_pokemon
-        .iter()
-        .map(|(pokemon, pokemon_db)| {
-            pokemon
-                .egg_groups
-                .iter()
-                .map(|egg_group| EggGroup {
-                    id: Ksuid::generate()
-                        .to_base62()
-                        .as_bytes()
-                        .into(),
-                    pokemon_id: pokemon_db.id.clone(),
-                    egg_group: egg_group.clone(),
-                })
-                .collect::<Vec<EggGroup>>()
-        })
-        .flatten()
-        .collect::<Vec<EggGroup>>();
+        insert_pokemon(&pool, &pokemon_db).await?;
 
-    let evolutions = new_pokemon
-        .iter()
-        .filter_map(|(pokemon, pokemon_db)| {
-            pokemon.evolves_from.clone().map(
-                |evolves_from| {
-                    let p = new_pokemon.iter().find(
-                        |(pkm, pkm_db)| {
-                            // dbg!(&evolves_from);
-                            pkm_db.name == evolves_from
-                        },
-                    );
-                    // dbg!(&p, evolves_from);
-                    EvolvesFrom {
-                        id: Ksuid::generate()
-                            .to_base62()
-                            .as_bytes()
-                            .into(),
-                        pokemon_id: pokemon_db.id.clone(),
-                        evolves_from: p
-                            .unwrap()
-                            .1
-                            .id
-                            .clone(),
-                    }
+        for ability in pokemon.abilities.iter() {
+            sqlx::query!(
+                r#"
+            INSERT INTO abilities_table (id, pokemon_id, ability) VALUES (?,?, ?)"#,
+                Ksuid::generate().to_base62().into_bytes(),
+                pokemon_db.id.clone(),
+                ability.clone(),
+            ).execute(&pool).await?;
+        }
+        for egg_group in pokemon.egg_groups.iter() {
+            sqlx::query!(
+                r#"
+            INSERT INTO abilities_table (id, pokemon_id, ability) VALUES (?,?, ?)"#,
+                Ksuid::generate().to_base62().into_bytes(),
+                pokemon_db.id.clone(),
+                egg_group.clone(),
+            ).execute(&pool).await?;
+        }
+        for typing in pokemon.typing.iter() {
+            sqlx::query!(
+                r#"
+            INSERT INTO abilities_table (id, pokemon_id, ability) VALUES (?,?, ?)"#,
+                Ksuid::generate().to_base62().into_bytes(),
+                pokemon_db.id.clone(),
+                typing.clone(),
+            ).execute(&pool).await?;
+        }
+        pokemon_map.insert(
+            pokemon.name.clone(),
+            (pokemon, pokemon_db),
+        );
+    }
+
+    for (key, (pokemon, pokemon_db)) in pokemon_map.iter() {
+        if let Some(evolves_from) = pokemon.evolves_from.clone() {
+            if let Some((
+                _key,
+                (_evolves_from_pokemon, evolves_from_db),
+            )) = pokemon_map.iter().find(
+                |(key, (pkm, pkm_db))| {
+                    // dbg!(&evolves_from);
+                    pkm_db.name == evolves_from
                 },
-            )
-        })
-        .collect::<Vec<EvolvesFrom>>();
-
-    let typings = new_pokemon
-        .iter()
-        .map(|(pokemon, pokemon_db)| {
-            pokemon
-                .typing
-                .iter()
-                .map(|typing| Typing {
-                    id: Ksuid::generate()
+            ) {
+                sqlx::query!(
+                    r#"
+                INSERT INTO abilities_table (id, pokemon_id, ability) VALUES (?,?, ?)"#,
+                
+                    Ksuid::generate()
                         .to_base62()
-                        .as_bytes()
-                        .into(),
-                    pokemon_id: pokemon_db.id.clone(),
-                    typing: typing.clone(),
-                })
-                .collect::<Vec<Typing>>()
-        })
-        .flatten()
-        .collect::<Vec<Typing>>();
+                        .into_bytes(),
+                    pokemon_db.id.clone(),
+                    evolves_from_db.id.clone(),
+                
+                ).execute(&pool).await?;
+            };
+        };
+    }
 
-    let result = diesel::insert_into(pokemon_table::table)
-        .values(
-            new_pokemon
-                .into_iter()
-                .map(|v| v.1)
-                .collect::<Vec<PokemonDB>>(),
-        )
-        .execute(&conn);
+    // let result = diesel::insert_into(pokemon_table::table)
+    //     .values(
+    //         new_pokemon
+    //             .into_iter()
+    //             .map(|v| v.1)
+    //             .collect::<Vec<PokemonDB>>(),
+    //     )
+    //     .execute(&conn);
 
-    diesel::insert_into(abilities_table::table)
-        .values(abilities)
-        .execute(&conn)?;
+    // diesel::insert_into(abilities_table::table)
+    //     .values(abilities)
+    //     .execute(&conn)?;
 
-    diesel::insert_into(egg_groups_table::table)
-        .values(egg_groups)
-        .execute(&conn)?;
+    // diesel::insert_into(egg_groups_table::table)
+    //     .values(egg_groups)
+    //     .execute(&conn)?;
 
-    diesel::insert_into(evolutions_table::table)
-        .values(evolutions)
-        .execute(&conn)?;
-    diesel::insert_into(typing_table::table)
-        .values(typings)
-        .execute(&conn)?;
+    // diesel::insert_into(evolutions_table::table)
+    //     .values(evolutions)
+    //     .execute(&conn)?;
+    // diesel::insert_into(typing_table::table)
+    //     .values(typings)
+    //     .execute(&conn)?;
 
-    dbg!(result);
+    // dbg!(result);
 
     Ok(())
 }

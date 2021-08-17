@@ -1,15 +1,8 @@
-use diesel::prelude::*;
 use ksuid::Ksuid;
 
 struct PokemonId(Ksuid);
 
-use crate::schema::*;
-use diesel::{
-    expression::AsExpression, prelude::*, sql_types::Binary,
-};
-
-#[derive(Debug, Queryable, Insertable)]
-#[table_name = "pokemon_table"]
+#[derive(Debug)]
 pub struct PokemonDB {
     pub id: Vec<u8>,
     pub name: String,
@@ -126,30 +119,26 @@ pub struct Pokemon {
     pub fairy_attack_effectiveness: f32,
 }
 
-#[derive(Debug, Queryable, Insertable)]
-#[table_name = "abilities_table"]
+#[derive(Debug)]
 pub struct Ability {
     pub id: Vec<u8>,
     pub pokemon_id: Vec<u8>,
     pub ability: String,
 }
 
-#[derive(Debug, Queryable, Insertable)]
-#[table_name = "egg_groups_table"]
+#[derive(Debug)]
 pub struct EggGroup {
     pub id: Vec<u8>,
     pub pokemon_id: Vec<u8>,
     pub egg_group: String,
 }
-#[derive(Debug, Queryable, Insertable)]
-#[table_name = "evolutions_table"]
+#[derive(Debug)]
 pub struct EvolvesFrom {
     pub id: Vec<u8>,
     pub pokemon_id: Vec<u8>,
     pub evolves_from: Vec<u8>,
 }
-#[derive(Debug, Queryable, Insertable)]
-#[table_name = "typing_table"]
+#[derive(Debug)]
 pub struct Typing {
     pub id: Vec<u8>,
     pub pokemon_id: Vec<u8>,

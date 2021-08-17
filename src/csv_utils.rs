@@ -110,7 +110,7 @@ impl From<PokemonCsv> for PokemonDB {
         }: PokemonCsv,
     ) -> Self {
         let id: Vec<u8> =
-            Ksuid::generate().to_base62().as_bytes().into();
+            Ksuid::generate().to_base62().into_bytes();
         let slug = name.to_kebab_case();
         PokemonDB {
             id,

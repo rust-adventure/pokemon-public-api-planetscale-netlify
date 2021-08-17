@@ -17,12 +17,12 @@ path = "src/upload-pokemon-data.rs"
 [dependencies]
 Inflector = "0.11.4"
 csv = "1.1.6"
-diesel = { version = "1.4.7", features = ["mysql", "64-column-tables"] }
 eyre = "0.6.5"
 itertools = "0.10.1"
 ksuid = "0.2.0"
 lamedh_http = "0.3.0"
 serde = { version = "1.0.127", features = ["derive"] }
+sqlx = { version = "0.5.5", features = ["mysql", "runtime-tokio-rustls"] }
 tokio = { version = "1.10.0", features = ["macros"] }
 tracing = "0.1.26"
 tracing-subscriber = "0.2.19"
