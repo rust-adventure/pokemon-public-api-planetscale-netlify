@@ -5,6 +5,7 @@ use sqlx::{
     MySql, MySqlPool,
 };
 use std::{collections::HashMap, convert::TryFrom, env};
+use indicatif::ProgressIterator;
 
 mod csv_utils;
 mod models;
@@ -163,8 +164,11 @@ async fn main() -> Result<()> {
         String,
         (PokemonCsv, PokemonDB),
     > = HashMap::new();
-    for row in csv::Reader::from_path("./pokemon.csv")?
-        .deserialize::<PokemonCsv>()
+
+    let mut csv_reader = csv::Reader::from_path("./pokemon.csv")?;
+    let it = csv_reader.deserialize::<PokemonCsv>();
+    let (lower_bound, upper_bound)= it.size_hint();
+    for row in it.progress_count(upper_bound.unwrap_or(lower_bound) as u64)
     {
         let pokemon = row?;
         let pokemon_db: PokemonDB = pokemon.clone().into();
@@ -183,7 +187,7 @@ async fn main() -> Result<()> {
         for egg_group in pokemon.egg_groups.iter() {
             sqlx::query!(
                 r#"
-            INSERT INTO abilities_table (id, pokemon_id, ability) VALUES (?,?, ?)"#,
+            INSERT INTO egg_groups_table (id, pokemon_id, egg_group) VALUES (?,?, ?)"#,
                 Ksuid::generate().to_base62().into_bytes(),
                 pokemon_db.id.clone(),
                 egg_group.clone(),
@@ -192,7 +196,7 @@ async fn main() -> Result<()> {
         for typing in pokemon.typing.iter() {
             sqlx::query!(
                 r#"
-            INSERT INTO abilities_table (id, pokemon_id, ability) VALUES (?,?, ?)"#,
+            INSERT INTO typing_table (id, pokemon_id, typing) VALUES (?,?, ?)"#,
                 Ksuid::generate().to_base62().into_bytes(),
                 pokemon_db.id.clone(),
                 typing.clone(),
@@ -217,7 +221,7 @@ async fn main() -> Result<()> {
             ) {
                 sqlx::query!(
                     r#"
-                INSERT INTO abilities_table (id, pokemon_id, ability) VALUES (?,?, ?)"#,
+                INSERT INTO evolutions_table (id, pokemon_id, evolves_from) VALUES (?,?, ?)"#,
                 
                     Ksuid::generate()
                         .to_base62()
