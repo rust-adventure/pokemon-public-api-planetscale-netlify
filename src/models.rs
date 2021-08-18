@@ -1,6 +1,6 @@
-use ksuid::Ksuid;
+use serde::Serialize;
 
-struct PokemonId(Ksuid);
+// struct PokemonId(Ksuid);
 
 #[derive(Debug)]
 pub struct PokemonDB {
@@ -97,6 +97,58 @@ pub struct Pokemon {
     // egg_groups: Vec<String>,
     pub base_happiness: u8,
     // evolves_from: Option<String>,
+    pub primary_color: String,
+    pub number_pokemon_with_typing: f32,
+    pub normal_attack_effectiveness: f32,
+    pub fire_attack_effectiveness: f32,
+    pub water_attack_effectiveness: f32,
+    pub electric_attack_effectiveness: f32,
+    pub grass_attack_effectiveness: f32,
+    pub ice_attack_effectiveness: f32,
+    pub fighting_attack_effectiveness: f32,
+    pub poison_attack_effectiveness: f32,
+    pub ground_attack_effectiveness: f32,
+    pub fly_attack_effectiveness: f32,
+    pub psychic_attack_effectiveness: f32,
+    pub bug_attack_effectiveness: f32,
+    pub rock_attack_effectiveness: f32,
+    pub ghost_attack_effectiveness: f32,
+    pub dragon_attack_effectiveness: f32,
+    pub dark_attack_effectiveness: f32,
+    pub steel_attack_effectiveness: f32,
+    pub fairy_attack_effectiveness: f32,
+}
+
+#[derive(Serialize, sqlx::FromRow)]
+pub struct PokemonProfile {
+    pub id: Vec<u8>,
+    pub name: String,
+    pub slug: String,
+    pub pokedex_id: u16,
+    // #[serde(deserialize_with = "from_comma_separated")]
+    pub abilities: Option<String>,
+    // #[serde(deserialize_with = "from_comma_separated")]
+    pub typings: Option<String>,
+    pub hp: u16,
+    pub attack: u16,
+    pub defense: u16,
+    pub special_attack: u16,
+    pub special_defense: u16,
+    pub speed: u16,
+    pub height: u16,
+    pub weight: u16,
+    pub generation: u16,
+    pub female_rate: Option<f32>,
+    pub genderless: i8,
+    pub legendary_or_mythical: i8,
+    pub is_default: i8,
+    pub forms_switchable: i8,
+    pub base_experience: u16,
+    pub capture_rate: u16,
+    // #[serde(deserialize_with = "from_comma_separated")]
+    pub egg_groups: Option<String>,
+    pub base_happiness: u16,
+    pub evolves_from: Option<Vec<u8>>,
     pub primary_color: String,
     pub number_pokemon_with_typing: f32,
     pub normal_attack_effectiveness: f32,

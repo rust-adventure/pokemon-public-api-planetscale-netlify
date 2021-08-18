@@ -1,8 +1,8 @@
 use eyre::{Result, WrapErr};
 use ksuid::Ksuid;
 use sqlx::{
-    mysql::{MySqlArguments, MySqlPoolOptions},
-    MySql, MySqlPool,
+    mysql::{ MySqlPoolOptions},
+     MySqlPool,
 };
 use std::{collections::HashMap, convert::TryFrom, env, fs};
 use indicatif::ProgressIterator;
@@ -211,13 +211,13 @@ async fn main() -> Result<()> {
         );
     }
 
-    for (key, (pokemon, pokemon_db)) in pokemon_map.iter() {
+    for (_key, (pokemon, pokemon_db)) in pokemon_map.iter() {
         if let Some(evolves_from) = pokemon.evolves_from.clone() {
             if let Some((
                 _key,
                 (_evolves_from_pokemon, evolves_from_db),
             )) = pokemon_map.iter().find(
-                |(key, (pkm, pkm_db))| {
+                |(_key, (_pkm, pkm_db))| {
                     // dbg!(&evolves_from);
                     pkm_db.name == evolves_from
                 },

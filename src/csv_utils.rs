@@ -1,5 +1,5 @@
 use crate::models::PokemonDB;
-use eyre::{Result, WrapErr};
+use eyre::Result;
 use inflector::Inflector;
 use ksuid::Ksuid;
 use serde::{de, Deserialize};
@@ -66,8 +66,8 @@ impl From<PokemonCsv> for PokemonDB {
         PokemonCsv {
             name,
             pokedex_id,
-            abilities,
-            typing,
+            abilities: _,
+            typing: _,
             hp,
             attack,
             defense,
@@ -84,9 +84,9 @@ impl From<PokemonCsv> for PokemonDB {
             forms_switchable,
             base_experience,
             capture_rate,
-            egg_groups,
+            egg_groups: _,
             base_happiness,
-            evolves_from,
+            evolves_from: _,
             primary_color,
             number_pokemon_with_typing,
             normal_attack_effectiveness,
