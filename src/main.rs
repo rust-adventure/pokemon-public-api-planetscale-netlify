@@ -14,10 +14,13 @@ mod db;
 #[tokio::main]
 async fn main(
     request: Request,
-    _: Context,
+    context: Context,
 ) -> Result<impl IntoResponse, Error> {
     let pool = db::connect().await?;
 
+    dbg!(&request);
+    dbg!(request.path_parameters());
+    dbg!(context);
     let query = request.query_string_parameters();
     let pokemon_requested = query.get("name");
 
