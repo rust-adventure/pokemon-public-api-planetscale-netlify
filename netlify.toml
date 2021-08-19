@@ -4,3 +4,8 @@ directory = "functions/"
 [build]
 command = "make build"
 publish = "www"
+
+[[redirects]]
+from = "/api/pokemon/:slug"
+to = "/.netlify/functions/pokemon"
+status = 200
