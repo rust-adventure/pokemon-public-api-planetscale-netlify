@@ -2,6 +2,7 @@ mod models;
 use models::*;
 
 use lamedh_http::{
+    http::Uri,
     lambda::{lambda, Context, Error},
     IntoResponse, Request, RequestExt,
 };
@@ -18,16 +19,13 @@ async fn main(
 ) -> Result<impl IntoResponse, Error> {
     let pool = db::connect().await?;
 
-    dbg!(&request);
-    dbg!(request.path_parameters());
-    dbg!(context);
-    let query = request.query_string_parameters();
-    let pokemon_requested = query.get("name");
+    let pokemon_requested = request
+        .uri()
+        .path()
+        .trim_start_matches("/api/pokemon/")
+        .trim_end_matches("/");
 
-    match pokemon_requested {
-        None => Ok(json!({"pokemon": "no such pokemon"})),
-        Some(slug) => {
-            let rows = sqlx::query_as!(PokemonProfile,"
+    let rows = sqlx::query_as!(PokemonProfile,"
             SELECT    P.id,
             P.name,
             P.slug,
@@ -104,12 +102,10 @@ async fn main(
         LEFT JOIN evolutions_table Ev
         ON        P.id = Ev.pokemon_id
         WHERE     slug = ?
-        ", slug)
+        ", pokemon_requested)
                 .fetch_one(&pool).await?;
 
-            Ok(serde_json::to_value(rows)?)
-        }
-    }
+    Ok(serde_json::to_value(rows)?)
 }
 
 #[derive(Serialize, sqlx::FromRow)]
