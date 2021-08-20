@@ -25,7 +25,7 @@ async fn main(
         .trim_start_matches("/api/pokemon/")
         .trim_end_matches("/");
 
-    let rows = sqlx::query_as!(PokemonProfile,"
+    let rows = sqlx::query_as!(PokemonProfile,r#"
             SELECT    P.id,
             P.name,
             P.slug,
@@ -63,10 +63,10 @@ async fn main(
             dark_attack_effectiveness,
             steel_attack_effectiveness,
             fairy_attack_effectiveness,
-            genderless,
-            legendary_or_mythical,
-            is_default,
-            forms_switchable,
+            genderless as "genderless!: bool",
+            legendary_or_mythical as "legendary_or_mythical!: bool",
+            is_default as "is_default!: bool",
+            forms_switchable as "forms_switchable!: bool",
             abilities,
             typings,
             egg_groups,
@@ -102,8 +102,8 @@ async fn main(
         LEFT JOIN evolutions_table Ev
         ON        P.id = Ev.pokemon_id
         WHERE     slug = ?
-        ", pokemon_requested)
-                .fetch_one(&pool).await?;
+        "#, pokemon_requested)
+        .fetch_one(&pool).await?;
 
     Ok(serde_json::to_value(rows)?)
 }
