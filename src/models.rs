@@ -1,7 +1,38 @@
-use serde::Serialize;
+use ksuid::Ksuid;
+use serde::{Serialize, Serializer};
+use sqlx::{database::HasValueRef, Database, Decode};
 
-// struct PokemonId(Ksuid);
+pub struct PokemonId(Ksuid);
 
+impl<'r, DB: Database> Decode<'r, DB> for PokemonId
+where
+    &'r [u8]: Decode<'r, DB>,
+{
+    fn decode(
+        value: <DB as HasValueRef<'r>>::ValueRef,
+    ) -> Result<
+        PokemonId,
+        Box<dyn std::error::Error + 'static + Send + Sync>,
+    > {
+        let value = <&[u8] as Decode<DB>>::decode(value)?;
+        let base62_ksuid = std::str::from_utf8(&value)?;
+        Ok(PokemonId(Ksuid::from_base62(
+            base62_ksuid,
+        )?))
+    }
+}
+
+impl Serialize for PokemonId {
+    fn serialize<S>(
+        &self,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.0.to_base62())
+    }
+}
 #[derive(Debug)]
 pub struct PokemonDB {
     pub id: Vec<u8>,
@@ -121,7 +152,7 @@ pub struct Pokemon {
 
 #[derive(Serialize, sqlx::FromRow)]
 pub struct PokemonProfile {
-    pub id: Vec<u8>,
+    pub id: PokemonId,
     pub name: String,
     pub slug: String,
     pub pokedex_id: u16,

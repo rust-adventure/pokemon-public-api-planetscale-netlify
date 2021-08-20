@@ -1,4 +1,5 @@
 mod models;
+use ksuid::Ksuid;
 use models::*;
 
 use lamedh_http::{
@@ -8,6 +9,7 @@ use lamedh_http::{
 };
 use serde::{Serialize, Serializer};
 use serde_json::json;
+use sqlx::{database::HasValueRef, Database, Decode};
 
 mod db;
 
@@ -26,7 +28,7 @@ async fn main(
         .trim_end_matches("/");
 
     let rows = sqlx::query_as!(PokemonProfile,r#"
-            SELECT    P.id,
+            SELECT    P.id as "id!: PokemonId",
             P.name,
             P.slug,
             pokedex_id,
