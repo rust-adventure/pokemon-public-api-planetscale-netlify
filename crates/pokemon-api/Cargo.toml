@@ -1,0 +1,15 @@
+[package]
+name = "pokemon-api"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+color-eyre = "0.5.11"
+ksuid = "0.2.0"
+lamedh_http = "0.3.0"
+serde = { version = "1.0.130", features = ["derive"] }
+serde_json = "1.0.67"
+sqlx = { version = "0.5.7", features = ["mysql", "runtime-tokio-rustls"] }
+tokio = { version = "1.11.0", features = ["macros"] }
