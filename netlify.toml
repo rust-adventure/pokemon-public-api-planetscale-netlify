@@ -1,0 +1,10 @@
+[functions]
+directory = "functions/"
+
+[build]
+command = """
+mkdir functions &&
+cargo build --release --bin pokemon-api &&
+cp target/release/pokemon-api functions/
+"""
+publish = "crates"
