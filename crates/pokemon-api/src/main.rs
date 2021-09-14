@@ -16,3 +16,20 @@ async fn handler(
     println!("handler");
     Ok(json!({"body": "Boop!"}))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn handler_handles() {
+        let event = json!({});
+
+        assert_eq!(
+            handler(event.clone(), Context::default())
+                .await
+                .unwrap(),
+            json!({"body": "Boop!"})
+        )
+    }
+}
