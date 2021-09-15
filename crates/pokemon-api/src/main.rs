@@ -1,5 +1,8 @@
 use lambda_runtime::{handler_fn, Context, Error};
+use serde::Serialize;
 use serde_json::{json, Value};
+use sqlx::mysql::MySqlPoolOptions;
+use std::env;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -9,12 +12,32 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
+#[derive(Debug, sqlx::FromRow, Serialize)]
+struct PokemonHp {
+    name: String,
+    hp: u16,
+}
 async fn handler(
     _: Value,
     _: Context,
 ) -> Result<Value, Error> {
     println!("handler");
-    Ok(json!({"body": "Boop!"}))
+    let database_url = env::var("DATABASE_URL")?;
+
+    let pool = MySqlPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await?;
+    let result = sqlx::query_as!(
+        PokemonHp,
+        r#"SELECT name, hp FROM pokemon WHERE slug = "bulbasaur""#
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    Ok(json!({
+        "body": serde_json::to_string(&result)?
+    }))
 }
 
 #[cfg(test)]
@@ -29,7 +52,14 @@ mod tests {
             handler(event.clone(), Context::default())
                 .await
                 .unwrap(),
-            json!({"body": "Boop!"})
+            json!({
+                "body": serde_json::to_string(
+                    &PokemonHp{
+                        name: String::from("Bulbasaur"),
+                        hp: 45
+                    },
+                ).unwrap()
+            })
         )
     }
 }
