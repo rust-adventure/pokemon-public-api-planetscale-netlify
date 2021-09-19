@@ -30,7 +30,8 @@ async fn handler(
         .await?;
     let result = sqlx::query_as!(
         PokemonHp,
-        r#"SELECT name, hp FROM pokemon WHERE slug = "bulbasaur""#
+        r#"SELECT name, hp FROM pokemon WHERE slug = ?"#,
+        "charmander"
     )
     .fetch_one(&pool)
     .await?;
@@ -55,8 +56,8 @@ mod tests {
             json!({
                 "body": serde_json::to_string(
                     &PokemonHp{
-                        name: String::from("Bulbasaur"),
-                        hp: 45
+                        name: String::from("Charmander"),
+                        hp: 49
                     },
                 ).unwrap()
             })
