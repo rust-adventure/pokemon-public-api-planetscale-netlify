@@ -38,7 +38,8 @@ async fn handler(
 
     let result = sqlx::query_as!(
         PokemonHp,
-        r#"SELECT name, hp from pokemon where slug = "bulbasaur""#
+        r#"SELECT name, hp FROM pokemon WHERE slug = ?"#,
+        "charmander"
     )
     .fetch_one(&pool)
     .await?;
@@ -129,8 +130,8 @@ mod tests {
                 multi_value_headers: HeaderMap::new(),
                 body: Some(Body::Text(
                     serde_json::to_string(&PokemonHp {
-                        name: String::from("Bulbasaur"),
-                        hp: 45
+                        name: String::from("Charmander"),
+                        hp: 39
                     },)
                     .unwrap()
                 )),
