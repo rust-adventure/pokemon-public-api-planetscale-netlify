@@ -78,11 +78,46 @@ mod tests {
 
     #[tokio::test]
     async fn handler_handles() {
-        let event = ApiGatewayProxyRequest {
+        let event = fake_request(
+            "/api/pokemon/bulbasaur".to_string(),
+        );
+
+        assert_eq!(
+            handler(event.clone(), Context::default())
+                .await
+                .unwrap(),
+            ApiGatewayProxyResponse {
+                status_code: 200,
+                headers: HeaderMap::new(),
+                multi_value_headers: HeaderMap::new(),
+                body: Some(Body::Text(
+                    serde_json::to_string(&PokemonHp {
+                        name: String::from("Bulbasaur"),
+                        hp: 45
+                    },)
+                    .unwrap()
+                )),
+                is_base64_encoded: Some(false),
+            }
+        )
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not yet implemented")]
+    async fn handler_handles_empty_pokemon() {
+        let event =
+            fake_request("/api/pokemon//".to_string());
+        handler(event.clone(), Context::default())
+            .await
+            .unwrap();
+    }
+
+    fn fake_request(
+        path: String,
+    ) -> ApiGatewayProxyRequest {
+        ApiGatewayProxyRequest {
             resource: None,
-            path: Some(
-                "/api/pokemon/bulbasaur".to_string(),
-            ),
+            path: Some(path),
             http_method: Method::GET,
             headers: HeaderMap::new(),
             multi_value_headers: HeaderMap::new(),
@@ -126,25 +161,6 @@ mod tests {
                 },
             body: None,
             is_base64_encoded: Some(false),
-        };
-
-        assert_eq!(
-            handler(event.clone(), Context::default())
-                .await
-                .unwrap(),
-            ApiGatewayProxyResponse {
-                status_code: 200,
-                headers: HeaderMap::new(),
-                multi_value_headers: HeaderMap::new(),
-                body: Some(Body::Text(
-                    serde_json::to_string(&PokemonHp {
-                        name: String::from("Bulbasaur"),
-                        hp: 45
-                    },)
-                    .unwrap()
-                )),
-                is_base64_encoded: Some(false),
-            }
-        )
+        }
     }
 }
