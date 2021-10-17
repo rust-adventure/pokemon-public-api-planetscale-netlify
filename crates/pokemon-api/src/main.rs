@@ -25,34 +25,43 @@ struct PokemonHp {
 }
 
 async fn handler(
-    _: ApiGatewayProxyRequest,
+    event: ApiGatewayProxyRequest,
     _: Context,
 ) -> Result<ApiGatewayProxyResponse, Error> {
     println!("handler");
     let database_url = env::var("DATABASE_URL")?;
+    let path = event
+        .path
+        .expect("expect there to always be an event path");
+    let requested_pokemon = path.split("/").last();
+    match requested_pokemon {
+        Some("") => todo!(),
+        None => todo!(),
+        Some(pokemon_name) => {
+            let pool = MySqlPoolOptions::new()
+                .max_connections(5)
+                .connect(&database_url)
+                .await?;
+            let result = sqlx::query_as!(
+                    PokemonHp,
+                    r#"SELECT name, hp FROM pokemon WHERE slug = ?"#,
+                    pokemon_name
+                )
+                .fetch_one(&pool)
+                .await?;
 
-    let pool = MySqlPoolOptions::new()
-        .max_connections(5)
-        .connect(&database_url)
-        .await?;
-
-    let result = sqlx::query_as!(
-        PokemonHp,
-        r#"SELECT name, hp FROM pokemon WHERE slug = ?"#,
-        "charmander"
-    )
-    .fetch_one(&pool)
-    .await?;
-
-    let json_pokemon = serde_json::to_string(&result)?;
-    let response = ApiGatewayProxyResponse {
-        status_code: 200,
-        headers: HeaderMap::new(),
-        multi_value_headers: HeaderMap::new(),
-        body: Some(Body::Text(json_pokemon)),
-        is_base64_encoded: Some(false),
-    };
-    Ok(response)
+            let json_pokemon =
+                serde_json::to_string(&result)?;
+            let response = ApiGatewayProxyResponse {
+                status_code: 200,
+                headers: HeaderMap::new(),
+                multi_value_headers: HeaderMap::new(),
+                body: Some(Body::Text(json_pokemon)),
+                is_base64_encoded: Some(false),
+            };
+            Ok(response)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -72,8 +81,7 @@ mod tests {
         let event = ApiGatewayProxyRequest {
             resource: None,
             path: Some(
-                "/.netlify/functions/pokemon-api"
-                    .to_string(),
+                "/api/pokemon/bulbasaur".to_string(),
             ),
             http_method: Method::GET,
             headers: HeaderMap::new(),
@@ -130,8 +138,8 @@ mod tests {
                 multi_value_headers: HeaderMap::new(),
                 body: Some(Body::Text(
                     serde_json::to_string(&PokemonHp {
-                        name: String::from("Charmander"),
-                        hp: 39
+                        name: String::from("Bulbasaur"),
+                        hp: 45
                     },)
                     .unwrap()
                 )),
