@@ -6,6 +6,9 @@ use aws_lambda_events::{
 };
 use http::header::HeaderMap;
 use lambda_runtime::{handler_fn, Context, Error};
+use serde::Serialize;
+use sqlx::mysql::MySqlPoolOptions;
+use std::env;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -15,16 +18,37 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
+#[derive(Debug, sqlx::FromRow, Serialize)]
+struct PokemonHp {
+    name: String,
+    hp: u16,
+}
+
 async fn handler(
     _: ApiGatewayProxyRequest,
     _: Context,
 ) -> Result<ApiGatewayProxyResponse, Error> {
     println!("handler");
+    let database_url = env::var("DATABASE_URL")?;
+
+    let pool = MySqlPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await?;
+
+    let result = sqlx::query_as!(
+        PokemonHp,
+        r#"SELECT name, hp from pokemon where slug = "bulbasaur""#
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    let json_pokemon = serde_json::to_string(&result)?;
     let response = ApiGatewayProxyResponse {
         status_code: 200,
         headers: HeaderMap::new(),
         multi_value_headers: HeaderMap::new(),
-        body: Some(Body::Text("Boop".to_string())),
+        body: Some(Body::Text(json_pokemon)),
         is_base64_encoded: Some(false),
     };
     Ok(response)
@@ -103,7 +127,13 @@ mod tests {
                 status_code: 200,
                 headers: HeaderMap::new(),
                 multi_value_headers: HeaderMap::new(),
-                body: Some(Body::Text("Boop".to_string())),
+                body: Some(Body::Text(
+                    serde_json::to_string(&PokemonHp {
+                        name: String::from("Bulbasaur"),
+                        hp: 45
+                    },)
+                    .unwrap()
+                )),
                 is_base64_encoded: Some(false),
             }
         )
