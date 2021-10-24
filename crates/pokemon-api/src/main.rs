@@ -7,6 +7,7 @@ use aws_lambda_events::{
 use http::header::HeaderMap;
 use lambda_runtime::{handler_fn, Context, Error};
 use serde::Serialize;
+use serde_json::json;
 use sqlx::mysql::MySqlPoolOptions;
 use std::env;
 
@@ -35,8 +36,20 @@ async fn handler(
         .expect("expect there to always be an event path");
     let requested_pokemon = path.split("/").last();
     match requested_pokemon {
-        Some("") => todo!(),
-        None => todo!(),
+        Some("") => {
+            let error_message = serde_json::to_string(&json!({
+                "error": "searched for empty pokemon"
+            }))?;
+            let response = ApiGatewayProxyResponse {
+                status_code: 400,
+                headers: HeaderMap::new(),
+                multi_value_headers: HeaderMap::new(),
+                body: Some(Body::Text(error_message)),
+                is_base64_encoded: Some(false),
+            };
+            Ok(response)
+        },
+        None => panic!("requested_pokemon is None, which should never happen"),
         Some(pokemon_name) => {
             let pool = MySqlPoolOptions::new()
                 .max_connections(5)
@@ -103,13 +116,25 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented")]
     async fn handler_handles_empty_pokemon() {
         let event =
             fake_request("/api/pokemon//".to_string());
-        handler(event.clone(), Context::default())
-            .await
-            .unwrap();
+        assert_eq!(
+            handler(event.clone(), Context::default())
+                .await
+                .unwrap(),
+            ApiGatewayProxyResponse {
+                status_code: 400,
+                headers: HeaderMap::new(),
+                multi_value_headers: HeaderMap::new(),
+                body: Some(Body::Text(
+                    serde_json::to_string(&json!({
+                        "error": "searched for empty pokemon"
+                    })).unwrap()
+                )),
+                is_base64_encoded: Some(false),
+            }
+        );
     }
 
     fn fake_request(
