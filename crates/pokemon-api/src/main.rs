@@ -11,12 +11,13 @@ use serde::Serialize;
 use serde_json::json;
 use sqlx::{mysql::MySqlPoolOptions, MySql, Pool};
 use std::env;
+use tracing::{error, info, instrument};
 
 static POOL: OnceCell<Pool<MySql>> = OnceCell::new();
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    println!("cold start");
+    tracing_subscriber::fmt::init();
     let database_url = env::var("DATABASE_URL")?;
     let pool = MySqlPoolOptions::new()
         .max_connections(5)
@@ -34,17 +35,18 @@ struct PokemonHp {
     hp: u16,
 }
 
+#[instrument]
 async fn handler(
     event: ApiGatewayProxyRequest,
     _: Context,
 ) -> Result<ApiGatewayProxyResponse, Error> {
-    println!("handler");
     let path = event
         .path
         .expect("expect there to always be an event path");
     let requested_pokemon = path.split("/").last();
     match requested_pokemon {
         Some("") => {
+            error!("searched for empty pokemon");
             let error_message = serde_json::to_string(&json!({
                 "error": "searched for empty pokemon"
             }))?;
@@ -59,6 +61,7 @@ async fn handler(
         },
         None => panic!("requested_pokemon is None, which should never happen"),
         Some(pokemon_name) => {
+            info!(pokemon_name,"requested a pokemon");
             let result = sqlx::query_as!(
                     PokemonHp,
                     r#"SELECT name, hp FROM pokemon WHERE slug = ?"#,
