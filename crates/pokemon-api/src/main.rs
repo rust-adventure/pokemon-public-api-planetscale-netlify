@@ -33,6 +33,7 @@ async fn main() -> Result<(), Error> {
 struct PokemonHp {
     name: String,
     hp: u16,
+    legendary_or_mythical: bool,
 }
 
 #[instrument]
@@ -64,7 +65,16 @@ async fn handler(
             info!(pokemon_name,"requested a pokemon");
             let result = sqlx::query_as!(
                     PokemonHp,
-                    r#"SELECT name, hp FROM pokemon WHERE slug = ?"#,
+                    r#"
+SELECT
+    name,
+    hp,
+    legendary_or_mythical as "legendary_or_mythical!: bool"
+FROM
+    pokemon
+WHERE
+    slug = ?
+"#,
                     pokemon_name
                 )
                 .fetch_one(POOL.get().unwrap())
@@ -113,7 +123,8 @@ mod tests {
                 body: Some(Body::Text(
                     serde_json::to_string(&PokemonHp {
                         name: String::from("Bulbasaur"),
-                        hp: 45
+                        hp: 45,
+                        legendary_or_mythical: false
                     },)
                     .unwrap()
                 )),
