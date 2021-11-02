@@ -1037,6 +1037,7 @@ dependencies = [
  "tracing",
  "tracing-futures",
  "tracing-subscriber",
+ "upload-pokemon-data",
 ]
 
 [[package]]
