@@ -3,9 +3,9 @@ directory = "functions/"
 
 [build]
 command = """
-mkdir functions &&
-cargo build --release --bin pokemon-api &&
-cp target/release/pokemon-api functions/
+mkdir -p functions &&
+cargo zigbuild --release --bin pokemon-api --target x86_64-unknown-linux-gnu.2.26 &&
+cp target/x86_64-unknown-linux-gnu/release/pokemon-api functions/
 """
 publish = "crates"
 

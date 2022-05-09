@@ -5,7 +5,7 @@ use aws_lambda_events::{
     },
 };
 use http::header::HeaderMap;
-use lambda_runtime::{handler_fn, Context, Error};
+use lambda_runtime::{service_fn, Error, LambdaEvent};
 use once_cell::sync::OnceCell;
 use serde::Serialize;
 use serde_json::json;
@@ -25,7 +25,7 @@ async fn main() -> Result<(), Error> {
         .connect(&database_url)
         .await?;
     POOL.get_or_init(|| pool);
-    let processor = handler_fn(handler);
+    let processor = service_fn(handler);
     lambda_runtime::run(processor).await?;
     Ok(())
 }
@@ -40,9 +40,10 @@ struct PokemonHp {
 
 #[instrument]
 async fn handler(
-    event: ApiGatewayProxyRequest,
-    _: Context,
+    event: LambdaEvent<ApiGatewayProxyRequest>,
 ) -> Result<ApiGatewayProxyResponse, Error> {
+    let (event, _context) = event.into_parts();
+
     let path = event
         .path
         .expect("expect there to always be an event path");
@@ -70,7 +71,7 @@ async fn handler(
                     r#"
 SELECT 
     id as "id!: PokemonId",
-    name,
+    name as "name!: String",
     hp,
     legendary_or_mythical as "legendary_or_mythical!: bool"
 FROM
