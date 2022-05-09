@@ -107,20 +107,34 @@ mod tests {
         ApiGatewayRequestIdentity,
     };
     use http::Method;
+    use lambda_runtime::Context;
 
     use super::*;
 
     #[tokio::test]
     async fn handler_handles() {
+        let database_url =
+            env::var("DATABASE_URL").unwrap();
+        let pool = MySqlPoolOptions::new()
+            .max_connections(5)
+            .connect(&database_url)
+            .await
+            .unwrap();
+        POOL.get_or_init(|| pool);
+
         let event = fake_request(
             "/api/pokemon/bulbasaur".to_string(),
         );
 
         let fake_id = PokemonId::new();
+
         assert_eq!(
-            handler(event.clone(), Context::default())
-                .await
-                .unwrap(),
+            handler(LambdaEvent::new(
+                event,
+                Context::default()
+            ))
+            .await
+            .unwrap(),
             ApiGatewayProxyResponse {
                 status_code: 200,
                 headers: HeaderMap::new(),
@@ -144,7 +158,10 @@ mod tests {
         let event =
             fake_request("/api/pokemon//".to_string());
         assert_eq!(
-            handler(event.clone(), Context::default())
+            handler(LambdaEvent::new(
+                event,
+                Context::default()
+            ))
                 .await
                 .unwrap(),
             ApiGatewayProxyResponse {
@@ -170,9 +187,9 @@ mod tests {
             http_method: Method::GET,
             headers: HeaderMap::new(),
             multi_value_headers: HeaderMap::new(),
-            query_string_parameters: HashMap::new(),
+            query_string_parameters: Default::default(),
             multi_value_query_string_parameters:
-                HashMap::new(),
+                Default::default(),
             path_parameters: HashMap::new(),
             stage_variables: HashMap::new(),
             request_context:
