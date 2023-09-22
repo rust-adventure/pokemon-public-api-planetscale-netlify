@@ -19,3 +19,20 @@ async fn function_handler(
 async fn main() -> Result<(), Error> {
     run(service_fn(function_handler)).await
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn accepts_apigw_request() {
+        let input = include_str!("apigw-request.json");
+
+        let request = lambda_http::request::from_str(input)
+            .expect("failed to create request");
+
+        let _response = function_handler(request)
+            .await
+            .expect("failed to handle request");
+    }
+}
