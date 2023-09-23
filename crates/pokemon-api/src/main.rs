@@ -24,7 +24,8 @@ async fn function_handler(
 
     let result = sqlx::query_as!(
         PokemonHp,
-        r#"SELECT name, hp from pokemon where slug = "bulbasaur""#
+        r#"SELECT name, hp from pokemon where slug = ?"#,
+        "charmander"
     )
     .fetch_one(&pool)
     .await?;
@@ -60,7 +61,7 @@ mod tests {
         assert_eq!(
             response.body(),
             &Body::Text(
-                "{\"name\":\"Bulbasaur\",\"hp\":45}"
+                "{\"name\":\"Charmander\",\"hp\":39}"
                     .to_string()
             )
         );
