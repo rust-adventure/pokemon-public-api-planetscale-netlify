@@ -1,6 +1,6 @@
 {
   "resource": "/{proxy+}",
-  "path": "/hello/world",
+  "path": "/bulbasaur",
   "httpMethod": "POST",
   "headers": {
     "Accept": "*/*",

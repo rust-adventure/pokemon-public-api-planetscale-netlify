@@ -13,29 +13,38 @@ struct PokemonHp {
 }
 
 async fn function_handler(
-    _event: Request,
+    event: Request,
 ) -> Result<Response<Body>, Error> {
-    let database_url = env::var("DATABASE_URL")?;
+    let path = event.uri().path();
+    let requested_pokemon = path.split("/").last();
 
-    let pool = MySqlPoolOptions::new()
-        .max_connections(5)
-        .connect(&database_url)
-        .await?;
+    match requested_pokemon {
+        None => todo!("this is a hard error, return 500"),
+        Some("") => todo!("we can not find a pokemon without a name, return 400"),
+        Some(pokemon_name) => {
+            let database_url = env::var("DATABASE_URL")?;
 
-    let result = sqlx::query_as!(
-        PokemonHp,
-        r#"SELECT name, hp from pokemon where slug = ?"#,
-        "charmander"
-    )
-    .fetch_one(&pool)
-    .await?;
+            let pool = MySqlPoolOptions::new()
+                .max_connections(5)
+                .connect(&database_url)
+                .await?;
 
-    let pokemon = serde_json::to_string(&result)?;
-    let resp = Response::builder()
-        .status(200)
-        .header(CONTENT_TYPE, "application/json")
-        .body(Body::Text(pokemon))?;
-    Ok(resp)
+            let result = sqlx::query_as!(
+                PokemonHp,
+                r#"SELECT name, hp from pokemon where slug = ?"#,
+                pokemon_name
+            )
+            .fetch_one(&pool)
+            .await?;
+
+            let pokemon = serde_json::to_string(&result)?;
+            let resp = Response::builder()
+                .status(200)
+                .header(CONTENT_TYPE, "application/json")
+                .body(Body::Text(pokemon))?;
+            Ok(resp)
+        }
+    }
 }
 
 #[tokio::main]
@@ -61,7 +70,7 @@ mod tests {
         assert_eq!(
             response.body(),
             &Body::Text(
-                "{\"name\":\"Charmander\",\"hp\":39}"
+                "{\"name\":\"Bulbasaur\",\"hp\":45}"
                     .to_string()
             )
         );
