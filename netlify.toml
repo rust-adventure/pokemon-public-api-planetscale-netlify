@@ -3,3 +3,8 @@ directory = "functions/"
 
 [build]
 publish = "crates"
+
+[[redirects]]
+from = "/api/pokemon/:slug"
+to = "/.netlify/functions/pokemon-api"
+status = 200
