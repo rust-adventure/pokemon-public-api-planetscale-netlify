@@ -4,8 +4,11 @@ use lambda_http::{
 };
 use serde::Serialize;
 use serde_json::json;
-use sqlx::mysql::MySqlPoolOptions;
+use sqlx::{mysql::MySqlPoolOptions, MySql, Pool};
 use std::env;
+use std::sync::OnceLock;
+
+static POOL: OnceLock<Pool<MySql>> = OnceLock::new();
 
 #[derive(Debug, sqlx::FromRow, Serialize)]
 struct PokemonHp {
@@ -33,19 +36,12 @@ async fn function_handler(
             Ok(resp)
         }
         Some(pokemon_name) => {
-            let database_url = env::var("DATABASE_URL")?;
-
-            let pool = MySqlPoolOptions::new()
-                .max_connections(5)
-                .connect(&database_url)
-                .await?;
-
             let result = sqlx::query_as!(
                 PokemonHp,
                 r#"SELECT name, hp from pokemon where slug = ?"#,
                 pokemon_name
             )
-            .fetch_one(&pool)
+            .fetch_one(POOL.get().unwrap())
             .await?;
 
             let pokemon = serde_json::to_string(&result)?;
@@ -60,6 +56,15 @@ async fn function_handler(
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    let database_url = env::var("DATABASE_URL")?;
+
+    let pool = MySqlPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await?;
+
+    POOL.get_or_init(|| pool);
+
     run(service_fn(function_handler)).await
 }
 
@@ -69,6 +74,17 @@ mod tests {
 
     #[tokio::test]
     async fn accepts_apigw_request() {
+        let database_url =
+            env::var("DATABASE_URL").unwrap();
+
+        let pool = MySqlPoolOptions::new()
+            .max_connections(5)
+            .connect(&database_url)
+            .await
+            .unwrap();
+
+        POOL.get_or_init(|| pool);
+
         let input = include_str!("apigw-request.json");
 
         let request = lambda_http::request::from_str(input)
@@ -89,6 +105,17 @@ mod tests {
 
     #[tokio::test]
     async fn handles_empty_pokemon() {
+        let database_url =
+            env::var("DATABASE_URL").unwrap();
+
+        let pool = MySqlPoolOptions::new()
+            .max_connections(5)
+            .connect(&database_url)
+            .await
+            .unwrap();
+
+        POOL.get_or_init(|| pool);
+
         let input =
             include_str!("empty-pokemon-request.json");
 
