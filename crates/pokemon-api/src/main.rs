@@ -8,11 +8,13 @@ use sqlx::{mysql::MySqlPoolOptions, MySql, Pool};
 use std::env;
 use std::sync::OnceLock;
 use tracing::{error, info, instrument};
+use upload_pokemon_data::PokemonId;
 
 static POOL: OnceLock<Pool<MySql>> = OnceLock::new();
 
 #[derive(Debug, sqlx::FromRow, Serialize)]
 struct PokemonHp {
+    id: PokemonId,
     name: String,
     hp: u16,
     legendary_or_mythical: bool,
@@ -43,7 +45,17 @@ async fn function_handler(
         Some(pokemon_name) => {
             let result = sqlx::query_as!(
                 PokemonHp,
-                r#"SELECT name, hp, legendary_or_mythical as "legendary_or_mythical!: bool" from pokemon where slug = ?"#,
+                r#"
+SELECT
+    id as "id!: PokemonId",
+    name,
+    hp,
+    legendary_or_mythical as "legendary_or_mythical!: bool"
+FROM
+    pokemon
+WHERE
+    slug = ?
+"#,
                 pokemon_name
             )
             .fetch_one(POOL.get().unwrap())
@@ -103,7 +115,7 @@ mod tests {
         assert_eq!(
             response.body(),
             &Body::Text(
-                "{\"name\":\"Bulbasaur\",\"hp\":45,\"legendary_or_mythical\":false}"
+                "{\"id\":\"2Vbj42oybesL4UeqponMuj2IPxt\",\"name\":\"Bulbasaur\",\"hp\":45,\"legendary_or_mythical\":false}"
                     .to_string()
             )
         );
