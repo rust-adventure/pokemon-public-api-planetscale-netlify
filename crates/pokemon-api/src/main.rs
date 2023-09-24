@@ -15,6 +15,7 @@ static POOL: OnceLock<Pool<MySql>> = OnceLock::new();
 struct PokemonHp {
     name: String,
     hp: u16,
+    legendary_or_mythical: bool,
 }
 
 #[instrument]
@@ -42,7 +43,7 @@ async fn function_handler(
         Some(pokemon_name) => {
             let result = sqlx::query_as!(
                 PokemonHp,
-                r#"SELECT name, hp from pokemon where slug = ?"#,
+                r#"SELECT name, hp, legendary_or_mythical as "legendary_or_mythical!: bool" from pokemon where slug = ?"#,
                 pokemon_name
             )
             .fetch_one(POOL.get().unwrap())
@@ -99,11 +100,10 @@ mod tests {
         let response = function_handler(request)
             .await
             .expect("failed to handle request");
-
         assert_eq!(
             response.body(),
             &Body::Text(
-                "{\"name\":\"Bulbasaur\",\"hp\":45}"
+                "{\"name\":\"Bulbasaur\",\"hp\":45,\"legendary_or_mythical\":false}"
                     .to_string()
             )
         );
