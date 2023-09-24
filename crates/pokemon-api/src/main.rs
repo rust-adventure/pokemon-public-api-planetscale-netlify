@@ -7,6 +7,7 @@ use serde_json::json;
 use sqlx::{mysql::MySqlPoolOptions, MySql, Pool};
 use std::env;
 use std::sync::OnceLock;
+use tracing::{error, info, instrument};
 
 static POOL: OnceLock<Pool<MySql>> = OnceLock::new();
 
@@ -16,15 +17,18 @@ struct PokemonHp {
     hp: u16,
 }
 
+#[instrument]
 async fn function_handler(
     event: Request,
 ) -> Result<Response<Body>, Error> {
     let path = event.uri().path();
     let requested_pokemon = path.split("/").last();
+    info!(requested_pokemon, "requested a pokemon");
 
     match requested_pokemon {
         None => todo!("this is a hard error, return 500"),
         Some("") => {
+            error!("searched for empty pokemon");
             let error_message =
                 serde_json::to_string(&json!({
                     "error": "searched for empty pokemon"
@@ -56,6 +60,8 @@ async fn function_handler(
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    tracing_subscriber::fmt::init();
+
     let database_url = env::var("DATABASE_URL")?;
 
     let pool = MySqlPoolOptions::new()

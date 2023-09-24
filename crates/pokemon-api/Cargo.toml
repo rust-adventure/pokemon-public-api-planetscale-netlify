@@ -18,3 +18,5 @@ sqlx = { version = "0.7.1", features = [
     "tls-rustls",
 ] }
 tokio = { version = "1.29.1", features = ["macros"] }
+tracing = "0.1.37"
+tracing-subscriber = "0.3.17"
